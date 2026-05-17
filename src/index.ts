@@ -1,4 +1,4 @@
-export * from './router/sensitive-route-state'
+export * from './router'
 export * from './hooks/usePolicyKey'
 export * from './components/SensitiveQueryCleaner'
 export * from './examples/activity-summary'
