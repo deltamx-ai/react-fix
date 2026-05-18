@@ -136,7 +136,7 @@ navigate({
 })
 ```
 
-现在这个 `useAppNavigate()` 已经改成**直接复用 TanStack Router 的原生类型签名**，不是自己再声明一套 `to/search/state` 类型。
+现在这个 `useAppNavigate()` 已经改成**和 TanStack Router 原生 `useNavigate` 保持同签名**，不是自己再声明一套 `to/search/state` 类型。
 
 而且它现在不只处理 `search.policyKey`，还会尽量处理这些入口：
 

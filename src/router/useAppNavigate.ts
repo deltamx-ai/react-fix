@@ -1,33 +1,25 @@
 import { useNavigate as useTanStackNavigate } from '@tanstack/react-router'
-import type {
-  FromPathOption,
-  RegisteredRouter,
-  UseNavigateResult,
-} from '@tanstack/router-core'
 import { patchPolicyKeyInOptions } from './policy-key-state'
 
 /**
- * 复用 TanStack Router 的 useNavigate 签名，只在内部对参数做最小 patch。
+ * 与 TanStack Router 原生 useNavigate 保持同签名。
  *
- * 当前支持：
- * - search: { policyKey }
- * - to: '/path?policyKey=xxx&other=yyy'
- * - state 合并保留
+ * 目标：
+ * - 调用侧尽量 0 类型心智成本
+ * - 内部只做 runtime patch，不额外改变泛型推导
  */
-export function useAppNavigate<
-  TRouter extends RegisteredRouter = RegisteredRouter,
-  TDefaultFrom extends string = string,
->(_defaultOpts?: {
-  from?: FromPathOption<TRouter, TDefaultFrom>
-}): UseNavigateResult<TDefaultFrom> {
-  const navigate = useTanStackNavigate<TRouter, TDefaultFrom>(_defaultOpts)
+export const useAppNavigate: typeof useTanStackNavigate = ((defaultOpts?: unknown) => {
+  const navigate = useTanStackNavigate(defaultOpts as never)
 
-  const wrappedNavigate: UseNavigateResult<TDefaultFrom> = ((
-    options: Parameters<typeof navigate>[0],
-  ) => {
-    const patched = patchPolicyKeyInOptions(options as Record<string, unknown>)
-    return navigate(patched.options as Parameters<typeof navigate>[0])
-  }) as UseNavigateResult<TDefaultFrom>
+  return ((options: unknown) => {
+    const patched = patchPolicyKeyInOptions(
+      options as Record<string, unknown> & {
+        to?: unknown
+        search?: unknown
+        state?: unknown
+      },
+    )
 
-  return wrappedNavigate
-}
+    return navigate(patched.options as never)
+  }) as never
+}) as typeof useTanStackNavigate
