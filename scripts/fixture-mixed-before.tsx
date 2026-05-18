@@ -1,5 +1,4 @@
-import { useSearch, Link } from '@tanstack/react-router'
-import { useAppNavigate as useNavigate } from '@/router'
+import { useNavigate, useSearch, Link } from '@tanstack/react-router'
 
 export function B() {
   const navigate = useNavigate()
