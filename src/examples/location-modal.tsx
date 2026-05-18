@@ -1,4 +1,4 @@
-import { navigateWithSensitiveState } from '../router/sensitive-route-state'
+import { navigateWithSensitiveState } from '../router/policy-key-state'
 import type { NavigateFn } from '../types/router-shim'
 
 interface LocationModalProps {

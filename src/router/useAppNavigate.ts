@@ -4,7 +4,7 @@ import type {
   RegisteredRouter,
   UseNavigateResult,
 } from '@tanstack/router-core'
-import { POLICY_KEY } from './sensitive-route-state'
+import { POLICY_KEY } from './policy-key-state'
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)

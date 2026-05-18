@@ -78,16 +78,26 @@ Route.useSearch().policyKey
 // 或 useSearch().policyKey
 ```
 
-逐步改成：
+统一改成：
 
 ```ts
 const policyKey = usePolicyKey()
 ```
 
-这个 hook 会：
+这是推荐的最终方式。
 
-1. 优先从 `location.state` 读取
-2. 兼容旧的 `search.policyKey`
+原因是：
+
+1. `usePolicyKey()` 会优先从 `location.state` 读取
+2. 仍兼容旧的 `search.policyKey`
+3. 页面层以后不用再关心 policyKey 到底来自 search 还是 state
+
+也就是说：
+
+- **以前**：`useSearch()` 负责读 policyKey
+- **现在**：`usePolicyKey()` 负责读 policyKey
+
+而 `useSearch()` 只保留给非敏感参数，例如 `epmRefNo`、筛选条件、分页参数等。
 
 这样你可以分批改，不需要一次性重构全项目。
 
@@ -221,16 +231,29 @@ import { useAppNavigate as useNavigate } from '@/router'
 
 #### 批量替换脚本
 
-这个模板里已经附了一个脚本：
+这个模板里已经附了一个 **AST 版** 替换脚本：
 
 ```bash
-node scripts/replace-use-navigate-imports.mjs <你的项目目录>
+node scripts/replace-use-navigate-imports.mjs <你的项目目录> <目标import路径>
 ```
 
-比如对当前模板目录自己执行：
+比如：
 
 ```bash
-node scripts/replace-use-navigate-imports.mjs .
+node scripts/replace-use-navigate-imports.mjs ./src '@/router'
+```
+
+如果只是想先看哪些文件会改，不直接写回：
+
+```bash
+node scripts/replace-use-navigate-imports.mjs ./src '@/router' --dry-run
+```
+
+当前 package.json 里也提供了快捷命令：
+
+```bash
+npm run replace:navigate
+npm run replace:navigate:dry
 ```
 
 脚本会处理两种最常见情况：
@@ -284,7 +307,7 @@ src/
   hooks/
     usePolicyKey.ts
   router/
-    sensitive-route-state.ts
+    policy-key-state.ts
   types/
     router-shim.ts
   index.ts
@@ -296,7 +319,7 @@ src/
 
 如果你现在要尽快改你自己的项目，优先抄这 3 个：
 
-1. `src/router/sensitive-route-state.ts`
+1. `src/router/policy-key-state.ts`
 2. `src/hooks/usePolicyKey.ts`
 3. `src/components/SensitiveQueryCleaner.tsx`
 
@@ -349,3 +372,51 @@ src/
 - `Route.useSearch`
 
 你可以把这些文件直接抄进现有项目，再按你们项目的实际 import 路径微调。
+
+---
+
+## FAQ：`useSearch()`、`usePolicyKey()` 和 `policy-key-state.ts`
+
+### `policyKey` 以后是不是用 `usePolicyKey()` 代替 `useSearch()`？
+是。
+
+推荐做法是：
+
+- `policyKey` → 统一走 `usePolicyKey()`
+- `useSearch()` → 只保留给非敏感参数
+
+例如：
+
+```ts
+const policyKey = usePolicyKey()
+const search = useSearch({ strict: false })
+const epmRefNo = search.epmRefNo
+```
+
+也就是说：
+
+- **以前**：`useSearch().policyKey`
+- **现在**：`usePolicyKey()`
+
+这样页面层不用再关心 `policyKey` 究竟来自 `search` 还是 `state`。
+
+### `policy-key-state.ts` 能不能删？
+**不建议删。**
+
+这个文件现在承担的是公共规则层，主要放：
+
+- `POLICY_KEY` 常量
+- `navigateWithSensitiveState()`
+- `readSensitiveValueFromLocation()`
+- `buildLocationAfterSensitiveMigration()`
+
+可以这样理解职责分工：
+
+- `usePolicyKey()`：负责读 `policyKey`
+- `useAppNavigate()`：负责大多数跳转时自动迁移 `policyKey`
+- `policy-key-state.ts`：负责公共规则和迁移逻辑
+- `SensitiveQueryCleaner`：负责兜底清理旧 URL
+
+所以它不是多余文件，而是这个方案的中间层。
+
+如果你后面想换个更贴你们项目的名字，可以改名，但不建议直接删掉。

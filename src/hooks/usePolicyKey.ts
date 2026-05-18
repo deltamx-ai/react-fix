@@ -3,7 +3,7 @@ import {
   POLICY_KEY,
   readSensitiveValueFromLocation,
   type RouterLocationLike,
-} from '../router/sensitive-route-state'
+} from '../router/policy-key-state'
 
 /**
  * 纯函数版本，便于单测或非 React 场景复用。

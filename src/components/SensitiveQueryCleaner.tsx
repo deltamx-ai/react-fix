@@ -3,7 +3,7 @@ import {
   buildLocationAfterSensitiveMigration,
   POLICY_KEY,
   type RouterLocationLike,
-} from '../router/sensitive-route-state'
+} from '../router/policy-key-state'
 import type { NavigateFn } from '../types/router-shim'
 
 interface SensitiveQueryCleanerProps {
