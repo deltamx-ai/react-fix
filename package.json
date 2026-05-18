@@ -6,7 +6,9 @@
   "scripts": {
     "check": "tsc --noEmit",
     "replace:navigate": "node scripts/replace-use-navigate-imports.mjs . '@/router'",
-    "replace:navigate:dry": "node scripts/replace-use-navigate-imports.mjs . '@/router' --dry-run"
+    "replace:navigate:dry": "node scripts/replace-use-navigate-imports.mjs . '@/router' --dry-run",
+    "replace:policykey-read": "node scripts/replace-policykey-readers.mjs . '@/hooks/usePolicyKey'",
+    "replace:policykey-read:dry": "node scripts/replace-policykey-readers.mjs . '@/hooks/usePolicyKey' --dry-run"
   },
   "dependencies": {
     "@tanstack/react-router": "^1.170.4",

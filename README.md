@@ -256,6 +256,25 @@ npm run replace:navigate
 npm run replace:navigate:dry
 ```
 
+另外还有第二个 AST 脚本，用来处理 **policyKey 读取方式迁移**：
+
+```bash
+npm run replace:policykey-read
+npm run replace:policykey-read:dry
+```
+
+它的目标不是替换 `useSearch()` 本身，而是把：
+
+- `useSearch().policyKey`
+- `Route.useSearch().policyKey`
+- `const { policyKey } = useSearch(...)`
+
+迁到：
+
+```ts
+const policyKey = usePolicyKey()
+```
+
 脚本会处理两种最常见情况：
 
 1. 只有 `useNavigate`
