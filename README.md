@@ -138,6 +138,13 @@ navigate({
 
 现在这个 `useAppNavigate()` 已经改成**直接复用 TanStack Router 的原生类型签名**，不是自己再声明一套 `to/search/state` 类型。
 
+而且它现在不只处理 `search.policyKey`，还会尽量处理这些入口：
+
+1. `search: { policyKey }`
+2. `to: '/path?policyKey=xxx'`
+3. `to: '/path?policyKey=xxx&other=yyy'`
+4. 原本已有 `state` 时做合并保留
+
 这样 `useAppNavigate()` 会自动：
 
 - 从 `search` 中拿出 `policyKey`
@@ -439,3 +446,53 @@ const epmRefNo = search.epmRefNo
 所以它不是多余文件，而是这个方案的中间层。
 
 如果你后面想换个更贴你们项目的名字，可以改名，但不建议直接删掉。
+
+### `useAppNavigate()` 现在能覆盖哪些传参入口？
+
+当前增强后，主要覆盖这些最常见的敏感参数传递方式：
+
+#### 1. search 对象
+
+```ts
+navigate({
+  to: '/manage-policy',
+  search: { policyKey, epmRefNo },
+})
+```
+
+会自动变成“`policyKey` 进 state，`epmRefNo` 留在 search”。
+
+#### 2. to 字符串 query
+
+```ts
+navigate({
+  to: `/manage-policy?policyKey=${policyKey}&epmRefNo=${epmRefNo}`,
+})
+```
+
+会自动尽量处理成：
+
+- `to: '/manage-policy'`
+- `search: { epmRefNo }`
+- `state: { policyKey }`
+
+#### 3. 已有 state
+
+如果原本已经传了：
+
+```ts
+state: { foo: 'bar' }
+```
+
+也会尽量保留并合并，不会直接覆盖掉。
+
+### 目前还不建议完全指望自动处理的场景
+
+下面这些还是建议人工检查：
+
+- `search` 传的是 reducer / updater function
+- `to` 是非常复杂的动态拼接
+- 自定义 url builder / route map 先拼完整 URL 再传给 navigate
+- 除了 `policyKey` 之外还有更多敏感字段需要统一抽离
+
+如果你们后面不止 `policyKey` 一个敏感字段，可以把 `POLICY_KEY` 扩成数组策略，继续往这一层收口。
