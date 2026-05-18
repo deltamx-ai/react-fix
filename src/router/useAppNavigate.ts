@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { useNavigate as useTanStackNavigate } from '@tanstack/react-router'
 import type {
   FromPathOption,
@@ -63,14 +62,15 @@ export function useAppNavigate<
 }): UseNavigateResult<TDefaultFrom> {
   const navigate = useTanStackNavigate<TRouter, TDefaultFrom>(_defaultOpts)
 
-  return useCallback(
-    ((options: Parameters<typeof navigate>[0]) => {
-      return navigate(
-        patchSensitiveState(options as Record<string, unknown>) as Parameters<
-          typeof navigate
-        >[0],
-      )
-    }) as UseNavigateResult<TDefaultFrom>,
-    [navigate],
-  )
+  const wrappedNavigate: UseNavigateResult<TDefaultFrom> = ((
+    options: Parameters<typeof navigate>[0],
+  ) => {
+    return navigate(
+      patchSensitiveState(options as Record<string, unknown>) as Parameters<
+        typeof navigate
+      >[0],
+    )
+  }) as UseNavigateResult<TDefaultFrom>
+
+  return wrappedNavigate
 }
