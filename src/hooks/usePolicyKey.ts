@@ -1,6 +1,9 @@
 import { useRouterState } from '@tanstack/react-router'
-import { POLICY_KEY, readSensitiveValueFromLocation } from '../router/sensitive-route-state'
-import type { RouterLocationLike } from '../types/router-shim'
+import {
+  POLICY_KEY,
+  readSensitiveValueFromLocation,
+  type RouterLocationLike,
+} from '../router/sensitive-route-state'
 
 /**
  * 纯函数版本，便于单测或非 React 场景复用。

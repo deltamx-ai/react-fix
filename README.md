@@ -126,6 +126,8 @@ navigate({
 })
 ```
 
+现在这个 `useAppNavigate()` 已经改成**直接复用 TanStack Router 的原生类型签名**，不是自己再声明一套 `to/search/state` 类型。
+
 这样 `useAppNavigate()` 会自动：
 
 - 从 `search` 中拿出 `policyKey`

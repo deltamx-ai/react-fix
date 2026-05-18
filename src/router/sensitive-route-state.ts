@@ -1,9 +1,16 @@
-import type {
-  NavigateWithSensitiveStateOptions,
-  RouterLocationLike,
-  SearchRecord,
-  SensitiveState,
-} from '../types/router-shim'
+import type { ParsedLocation } from '@tanstack/react-router'
+
+/**
+ * demo / 文档层的轻量 location 结构。
+ * 真正接 TanStack Router 时，也可以直接传 ParsedLocation。
+ */
+export interface RouterLocationLike {
+  pathname: string
+  search?: Record<string, unknown>
+  state?: Record<string, unknown>
+}
+
+export type CompatibleLocation = RouterLocationLike | ParsedLocation
 
 /**
  * 统一管理敏感 route state 的 key。
@@ -15,18 +22,22 @@ export const SENSITIVE_ROUTE_KEYS = {
 
 export const POLICY_KEY = SENSITIVE_ROUTE_KEYS.policyKey
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 export function getSensitiveStateValue<T = string>(
-  state: SensitiveState | undefined,
+  state: Record<string, unknown> | undefined,
   key: string,
 ): T | undefined {
   return state?.[key] as T | undefined
 }
 
 export function omitSensitiveKeysFromSearch(
-  search: SearchRecord | undefined,
+  search: Record<string, unknown> | undefined,
   keys: string[] = [POLICY_KEY],
-): SearchRecord | undefined {
-  if (!search) return search
+): Record<string, unknown> | undefined {
+  if (!isPlainObject(search)) return search
 
   const nextSearch = { ...search }
 
@@ -42,26 +53,30 @@ export function omitSensitiveKeysFromSearch(
  * - 正常 search 保留
  * - 敏感值放到 state
  * - 自动避免把敏感值继续挂在 search 上
+ *
+ * 重点：不自己声明 navigate 的 options 类型，而是直接复用传入 navigate 的参数类型。
  */
-export function navigateWithSensitiveState({
-  navigate,
-  to,
-  from,
-  search,
-  replace,
-  sensitive,
-}: NavigateWithSensitiveStateOptions) {
-  const nextSearch = omitSensitiveKeysFromSearch(search)
+export function navigateWithSensitiveState<
+  TNavigate extends (options: any) => any,
+>(params: {
+  navigate: TNavigate
+  sensitive?: Record<string, unknown>
+} & Parameters<TNavigate>[0]) {
+  const { navigate, sensitive, ...options } = params
+  const optionBag = options as Record<string, unknown>
+  const rawSearch = optionBag.search
+  const nextSearch = omitSensitiveKeysFromSearch(
+    isPlainObject(rawSearch) ? rawSearch : undefined,
+  )
 
-  navigate({
-    to,
-    from,
-    search: nextSearch,
-    replace,
+  return navigate({
+    ...optionBag,
+    search: nextSearch ?? rawSearch,
     state: {
-      ...sensitive,
+      ...(isPlainObject(optionBag.state) ? optionBag.state : {}),
+      ...(sensitive ?? {}),
     },
-  })
+  } as Parameters<TNavigate>[0])
 }
 
 /**
@@ -69,25 +84,32 @@ export function navigateWithSensitiveState({
  * 这样可以支持渐进迁移。
  */
 export function readSensitiveValueFromLocation<T = string>(
-  location: RouterLocationLike,
+  location: CompatibleLocation,
   key: string,
 ): T | undefined {
-  const fromState = location.state?.[key] as T | undefined
+  const state = isPlainObject(location.state)
+    ? location.state
+    : (location.state as Record<string, unknown> | undefined)
+  const search = isPlainObject(location.search)
+    ? location.search
+    : (location.search as Record<string, unknown> | undefined)
+
+  const fromState = state?.[key] as T | undefined
   if (fromState !== undefined && fromState !== null && fromState !== '') {
     return fromState
   }
 
-  return location.search?.[key] as T | undefined
+  return search?.[key] as T | undefined
 }
 
 /**
  * 判断当前 URL 上是否还残留敏感 query。
  */
 export function hasSensitiveQuery(
-  search: SearchRecord | undefined,
+  search: Record<string, unknown> | undefined,
   key: string = POLICY_KEY,
 ): boolean {
-  if (!search) return false
+  if (!isPlainObject(search)) return false
   return Boolean(search[key])
 }
 
@@ -96,22 +118,28 @@ export function hasSensitiveQuery(
  * 常用于 cleaner 组件中。
  */
 export function buildLocationAfterSensitiveMigration(
-  location: RouterLocationLike,
+  location: CompatibleLocation,
   key: string = POLICY_KEY,
 ): RouterLocationLike | null {
-  const value = location.search?.[key]
+  const search = isPlainObject(location.search)
+    ? location.search
+    : (location.search as Record<string, unknown> | undefined)
+  const state = isPlainObject(location.state)
+    ? location.state
+    : (location.state as Record<string, unknown> | undefined)
+  const value = search?.[key]
 
   if (!value) {
     return null
   }
 
-  const nextSearch = omitSensitiveKeysFromSearch(location.search, [key])
+  const nextSearch = omitSensitiveKeysFromSearch(search, [key])
 
   return {
     pathname: location.pathname,
     search: nextSearch,
     state: {
-      ...(location.state ?? {}),
+      ...(state ?? {}),
       [key]: value,
     },
   }

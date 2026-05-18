@@ -1,6 +1,10 @@
 export type SearchRecord = Record<string, unknown>
 export type SensitiveState = Record<string, unknown>
 
+/**
+ * 只给 examples/demo 用。
+ * 核心实现已经尽量改成直接复用 TanStack Router 类型，不再依赖这里。
+ */
 export interface NavigateFn {
   (options: {
     to: string
@@ -9,19 +13,4 @@ export interface NavigateFn {
     replace?: boolean
     state?: SensitiveState
   }): void
-}
-
-export interface NavigateWithSensitiveStateOptions {
-  navigate: NavigateFn
-  to: string
-  from?: string
-  search?: SearchRecord
-  replace?: boolean
-  sensitive?: SensitiveState
-}
-
-export interface RouterLocationLike {
-  pathname: string
-  search?: SearchRecord
-  state?: SensitiveState
 }

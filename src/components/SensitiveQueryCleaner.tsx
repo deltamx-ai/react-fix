@@ -2,8 +2,9 @@ import { useEffect } from 'react'
 import {
   buildLocationAfterSensitiveMigration,
   POLICY_KEY,
+  type RouterLocationLike,
 } from '../router/sensitive-route-state'
-import type { NavigateFn, RouterLocationLike } from '../types/router-shim'
+import type { NavigateFn } from '../types/router-shim'
 
 interface SensitiveQueryCleanerProps {
   location: RouterLocationLike

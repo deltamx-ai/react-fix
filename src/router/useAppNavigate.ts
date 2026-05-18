@@ -1,47 +1,76 @@
+import { useCallback } from 'react'
 import { useNavigate as useTanStackNavigate } from '@tanstack/react-router'
-import { omitSensitiveKeysFromSearch, POLICY_KEY } from './sensitive-route-state'
-import type { SearchRecord, SensitiveState } from '../types/router-shim'
+import type {
+  FromPathOption,
+  RegisteredRouter,
+  UseNavigateResult,
+} from '@tanstack/router-core'
+import { POLICY_KEY } from './sensitive-route-state'
 
-interface UseAppNavigateOptions {
-  to: string
-  from?: string
-  search?: SearchRecord
-  replace?: boolean
-  state?: SensitiveState
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /**
- * 对 useNavigate 的轻量封装。
+ * 仅在运行时 patch plain object 形式的 search/state：
+ * - 如果 search 里出现 policyKey，则把它移到 state
+ * - 如果 search 不是普通对象（例如 reducer / true / 其他形式），则原样透传
  *
- * 目标：
- * - 尽量少改业务调用方式
- * - 如果 search 里出现 policyKey，自动转移到 state
- * - 让老代码从“显式传 search.policyKey”平滑过渡
+ * 这样可以尽量复用 TanStack Router 的原生类型，避免自定义 navigate 类型
+ * 与真实路由泛型冲突。
+ */
+function patchSensitiveState<TOptions extends Record<string, unknown>>(
+  options: TOptions,
+): TOptions {
+  const rawSearch = options.search
+
+  if (!isPlainObject(rawSearch)) {
+    return options
+  }
+
+  const policyKey = rawSearch[POLICY_KEY]
+
+  if (policyKey === undefined || policyKey === null || policyKey === '') {
+    return options
+  }
+
+  const nextSearch = { ...rawSearch }
+  delete nextSearch[POLICY_KEY]
+
+  const rawState = options.state
+  const nextState = isPlainObject(rawState) ? { ...rawState } : {}
+  nextState[POLICY_KEY] = policyKey
+
+  return {
+    ...options,
+    search: nextSearch,
+    state: nextState,
+  }
+}
+
+/**
+ * 复用 TanStack Router 的 useNavigate 签名，只在内部对参数做最小 patch。
  *
  * 用法：
  * const navigate = useAppNavigate()
  * navigate({ to: '/manage-policy', search: { policyKey, epmRefNo } })
  */
-export function useAppNavigate() {
-  const navigate = useTanStackNavigate()
+export function useAppNavigate<
+  TRouter extends RegisteredRouter = RegisteredRouter,
+  TDefaultFrom extends string = string,
+>(_defaultOpts?: {
+  from?: FromPathOption<TRouter, TDefaultFrom>
+}): UseNavigateResult<TDefaultFrom> {
+  const navigate = useTanStackNavigate<TRouter, TDefaultFrom>(_defaultOpts)
 
-  return (options: UseAppNavigateOptions) => {
-    const rawSearch = options.search
-    const nextSearch = omitSensitiveKeysFromSearch(rawSearch)
-    const nextState: SensitiveState = {
-      ...(options.state ?? {}),
-    }
-
-    const policyKey = rawSearch?.[POLICY_KEY]
-
-    if (policyKey !== undefined && policyKey !== null && policyKey !== '') {
-      nextState[POLICY_KEY] = policyKey
-    }
-
-    return navigate({
-      ...options,
-      search: nextSearch,
-      state: nextState,
-    })
-  }
+  return useCallback(
+    ((options: Parameters<typeof navigate>[0]) => {
+      return navigate(
+        patchSensitiveState(options as Record<string, unknown>) as Parameters<
+          typeof navigate
+        >[0],
+      )
+    }) as UseNavigateResult<TDefaultFrom>,
+    [navigate],
+  )
 }
